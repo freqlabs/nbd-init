@@ -1,5 +1,19 @@
 # rc.reroot init hook
 
+## Background
+
+From [this mailing list post](https://lists.freebsd.org/pipermail/freebsd-announce/2016-February/001706.html):
+
+	One of the long-missing features of FreeBSD was the ability to boot up
+	with a temporary rootfs, configure the kernel to be able to access the
+	real rootfs, and then replace the temporary root with the real one. In
+	Linux, this functionality is known as pivot_root. The reroot projects
+	provides similar functionality in a different, slightly more
+	user-friendly way: rerooting. Simply put, from the user point of view
+	it looks like the system performs a partial shutdown, killing all
+	processes and unmounting the rootfs, and then partial bringup, mounting
+	the new rootfs, running init, and running the startup scripts as usual.
+
 ## ~~Overview~~ Details
 
 In a reroot, all user processes are terminated before unmounting the old root
