@@ -1,6 +1,6 @@
 # rc.reroot init hook
 
-## Overview
+## ~~Overview~~ Details
 
 In a reroot, all user processes are terminated before unmounting the old root
 filesystem and mounting a new one.  This means GEOM Gate devices and other
@@ -75,6 +75,7 @@ client" use case and are humorously ungraceful at this time.
 The example could easily be adapted to use `ggated(8)` and `ggatec(8)` instead
 of `nbd-server` and `nbd-client`.
 
-In the future, a userland RBD client for Ceph could take advantage of this same
-mechanism to mount FreeBSD's root filesystem from from a cluster backed, thinly
-provisioned machine image.
+In the future, a userland RBD client for
+[Ceph](http://ceph.com/ceph-storage/block-storage/) could take advantage of
+this same mechanism to mount FreeBSD's root filesystem from from a cluster
+backed, thinly provisioned machine image.
