@@ -48,12 +48,24 @@ A boot image can be prepared by making the following modifications to a
 FreeBSD 11 or later mfsbsd.img, mini-memstick.img or similar:
 
 + `/sbin/init` replaced with the modified `init`
-+ an NBD client at `/sbin/nbd-client`
-+ `/etc/rc` replaced with a short script to bring up network interfaces and
-  immediately begin the reroot process (example in `etc/`)
-+ the reroot hook script `/etc/rc.reroot`, which copies the NBD client to the
-  reroot tmpfs in `/dev/reroot/`, starts the client, and updates the kernel
-  environment for the new root filesystem (example in `etc/`)
++ an NBD client placed at `/sbin/nbd-client`
++ `/etc/rc` replaced with a short script to
+  + bring up network interfaces
+  + begin the reroot process
++ the reroot hook script `/etc/rc.reroot` to
+  + run two shell commands that replace ~100 lines of C from `init.c`:
+	```
+	mount -t tmpfs tmpfs /dev/reroot
+	cp /sbin/init /dev/reroot/init
+	```
+  + perform any tasks needed by the administrator, such as:
+    + copy an NBD client to the reroot tmpfs
+    + obtain connection parameters for the NBD client
+    + start the NBD client
+    + update the kernel environment to specify where to mount the new root
+      filesystem from
+
+Examples of the two scripts can be found in `etc/` in this repo.
 
 The example `loader.conf` in `boot/` can be used with a custom built root
 memdisk akin to how mfsbsd is built, as a demonstration of configuring the
@@ -101,22 +113,14 @@ package repo to serve the root pool image for the purpose of this example.
 ## Caveats
 
 The `/etc/rc.reroot` script is mandatory for a reroot to succeed in this
-implementation, which may not be the ideal solution.  The script can simply be
-an empty file, but if it cannot be read or exits with an error, `init` will
-drop the system to single user mode in the middle of the reroot process.
+implementation.  If it cannot be read or exits with an error, `init` will drop
+the system to single user mode in the middle of the reroot process.
 
 Shutdown and reboot have not yet been addressed for the "root on a userland
 client" use case and are humorously ungraceful at this time.
 
 The version of init in this repo has not been tested on FreeBSD 10.3, but the
 concept should not be any different.
-
-This method of implementing the hook is extremely uninvasive, but may have room
-for some improvement.  The hook could be moved to the end of the first phase of
-a reroot, replacing the code for mounting a tmpfs and copying init over to it.
-These functions could then be performed by the `rc.reroot` script instead,
-allowing even greater flexibility to the system administrator and taking
-advantage of existing higher level tools to reduce the complexity of init.
 
 ## Possibilities
 

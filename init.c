@@ -647,125 +647,10 @@ write_stderr(const char *message)
 	write(STDERR_FILENO, message, strlen(message));
 }
 
-static int
-read_file(const char *path, void **bufp, size_t *bufsizep)
-{
-	struct stat sb;
-	size_t bufsize;
-	void *buf;
-	ssize_t nbytes;
-	int error, fd;
-
-	fd = open(path, O_RDONLY);
-	if (fd < 0) {
-		emergency("%s: %s", path, strerror(errno));
-		return (-1);
-	}
-
-	error = fstat(fd, &sb);
-	if (error != 0) {
-		emergency("fstat: %s", strerror(errno));
-		close(fd);
-		return (error);
-	}
-
-	bufsize = sb.st_size;
-	buf = malloc(bufsize);
-	if (buf == NULL) {
-		emergency("malloc: %s", strerror(errno));
-		close(fd);
-		return (error);
-	}
-
-	nbytes = read(fd, buf, bufsize);
-	if (nbytes != (ssize_t)bufsize) {
-		emergency("read: %s", strerror(errno));
-		close(fd);
-		free(buf);
-		return (error);
-	}
-
-	error = close(fd);
-	if (error != 0) {
-		emergency("close: %s", strerror(errno));
-		free(buf);
-		return (error);
-	}
-
-	*bufp = buf;
-	*bufsizep = bufsize;
-
-	return (0);
-}
-
-static int
-create_file(const char *path, const void *buf, size_t bufsize)
-{
-	ssize_t nbytes;
-	int error, fd;
-
-	fd = open(path, O_WRONLY | O_CREAT | O_EXCL, 0700);
-	if (fd < 0) {
-		emergency("%s: %s", path, strerror(errno));
-		return (-1);
-	}
-
-	nbytes = write(fd, buf, bufsize);
-	if (nbytes != (ssize_t)bufsize) {
-		emergency("write: %s", strerror(errno));
-		close(fd);
-		return (-1);
-	}
-
-	error = close(fd);
-	if (error != 0) {
-		emergency("close: %s", strerror(errno));
-		return (-1);
-	}
-
-	return (0);
-}
-
-static int
-mount_tmpfs(const char *fspath)
-{
-	struct iovec *iov;
-	char errmsg[255];
-	int error, iovlen;
-
-	iov = NULL;
-	iovlen = 0;
-	memset(errmsg, 0, sizeof(errmsg));
-	build_iovec(&iov, &iovlen, "fstype",
-	    __DECONST(void *, "tmpfs"), (size_t)-1);
-	build_iovec(&iov, &iovlen, "fspath",
-	    __DECONST(void *, fspath), (size_t)-1);
-	build_iovec(&iov, &iovlen, "errmsg",
-	    errmsg, sizeof(errmsg));
-
-	error = nmount(iov, iovlen, 0);
-	if (error != 0) {
-		if (*errmsg != '\0') {
-			emergency("cannot mount tmpfs on %s: %s: %s",
-			    fspath, errmsg, strerror(errno));
-		} else {
-			emergency("cannot mount tmpfs on %s: %s",
-			    fspath, strerror(errno));
-		}
-		return (error);
-	}
-	return (0);
-}
-
 static state_func_t
 reroot(void)
 {
-	void *buf;
-	size_t bufsize;
 	int error;
-
-	buf = NULL;
-	bufsize = 0;
 
 	revoke_ttys();
 	runshutdown();
@@ -782,18 +667,16 @@ reroot(void)
 	}
 
 	/*
-	 * Copy the init binary into tmpfs, so that we can unmount
-	 * the old rootfs without committing suicide.
+	 * Hook to a script to copy the init binary into tmpfs, so that we
+	 * can unmount the old rootfs without committing suicide.
+	 * The administrator might choose to do other things in here, but
+	 * nothing can be using the root filesystem when this script
+	 * returns or the system will hang.
 	 */
-	error = read_file(init_path_argv0, &buf, &bufsize);
-	if (error != 0)
+	if (run_script(_PATH_RUNREROOT) != NULL) {
+		emergency("%s failed", _PATH_RUNREROOT);
 		goto out;
-	error = mount_tmpfs(_PATH_REROOT);
-	if (error != 0)
-		goto out;
-	error = create_file(_PATH_REROOT_INIT, buf, bufsize);
-	if (error != 0)
-		goto out;
+	}
 
 	/*
 	 * Execute the temporary init.
@@ -803,7 +686,6 @@ reroot(void)
 
 out:
 	emergency("reroot failed; going to single user mode");
-	free(buf);
 	return (state_func_t) single_user;
 }
 
@@ -811,16 +693,8 @@ static state_func_t
 reroot_phase_two(void)
 {
 	char init_path[PATH_MAX], *path, *path_component;
-	state_func_t next_transition;
 	size_t init_path_len;
 	int nbytes, error;
-
-	/*
-	 * Run the script for tasks that need to execute before rerooting.
-	 */
-
-	if ((next_transition = run_script(_PATH_RUNREROOT)) != NULL)
-		return next_transition;
 
 	/*
 	 * Ask the kernel to mount the new rootfs.
