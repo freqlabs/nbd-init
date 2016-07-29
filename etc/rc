@@ -1,0 +1,18 @@
+#!/bin/sh
+
+stty status '^T' 2> /dev/null
+
+HOME=/
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+export HOME PATH
+
+mount -uw /
+
+echo "Starting interfaces"
+for nic in $(ifconfig -l ether)
+do
+	ifconfig ${nic} | grep -q "no carrier" && continue
+	dhclient ${nic}
+done
+
+reboot -r

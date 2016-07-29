@@ -1,0 +1,30 @@
+--- init.c.orig	2016-07-28 19:58:34.949193000 +0000
++++ init.c	2016-07-28 07:28:03.286166000 +0000
+@@ -811,10 +811,18 @@
+ reroot_phase_two(void)
+ {
+ 	char init_path[PATH_MAX], *path, *path_component;
++	state_func_t next_transition;
+ 	size_t init_path_len;
+ 	int nbytes, error;
+ 
+ 	/*
++	 * Run the script for tasks that need to execute before rerooting.
++	 */
++
++	if ((next_transition = run_script(_PATH_RUNREROOT)) != NULL)
++		return next_transition;
++
++	/*
+ 	 * Ask the kernel to mount the new rootfs.
+ 	 */
+ 	error = reboot(RB_REROOT);
+--- pathnames.h.orig	2016-07-28 19:59:40.026417000 +0000
++++ pathnames.h	2016-07-28 20:03:49.434807000 +0000
+@@ -39,5 +39,6 @@
+ #define	_PATH_SLOGGER		"/sbin/session_logger"
+ #define	_PATH_RUNCOM		"/etc/rc"
+ #define	_PATH_RUNDOWN		"/etc/rc.shutdown"
++#define	_PATH_RUNREROOT		"/etc/rc.reroot"
+ #define	_PATH_REROOT		"/dev/reroot"
+ #define	_PATH_REROOT_INIT	_PATH_REROOT "/init"

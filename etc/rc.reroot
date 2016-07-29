@@ -1,0 +1,39 @@
+#!/bin/sh
+
+PATH=/bin:/sbin
+
+# The nbd-client daemon must be copied to and run from the reroot
+# path, because the root filesystem is going to be unmounted.
+cp /sbin/nbd-client /dev/reroot/nbd-client
+
+echo "Starting NBD clients:"
+
+started=0
+for dev in $(kenv nbd_devs)
+do
+	server=$(kenv nbd_${dev}_server)
+
+	echo "        nbd-client ${server}"
+	if /dev/reroot/nbd-client ${server}
+	then
+		: $((started += 1))
+	fi 
+done
+
+if [ ${started} -lt 1 ]
+then
+	echo "Failed to connect any NBD clients!"
+	exit 1
+fi
+
+kldload zfs
+
+# Set the kernel environment variables for reroot
+pool="system"
+kenv vfs.root.mountfrom="zfs:${pool}/ROOT/default"
+kenv zfs_be_active="zfs:${pool}/ROOT/default"
+kenv zfs_be_currpage="1"
+kenv zfs_be_pages="1"
+kenv zfs_be_root="${pool}/ROOT"
+
+exit 0
