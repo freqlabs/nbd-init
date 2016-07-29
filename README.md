@@ -1,4 +1,4 @@
-# reroot init hook
+# rc.reroot init hook
 
 ## Overview
 
@@ -14,7 +14,13 @@ the new root filesystem.  This gives an administrator the opportunity to copy
 their storage provider program to the reroot tmpfs and launch it as a daemon,
 thus providing the storage volumes from which to mount the new root filesystem.
 
-## What Are These Files
+The placement of the hook must be after the reroot tmpfs has been mounted to
+`/dev/reroot` but before the old root filesystem has been replaced.  This lets
+the hook be used to copy any needed daemons to the reroot tmpfs so that the
+root filesystem remains unused and is free to be replaced after the script
+exits.
+
+## Getting Started
 
 This repo contains a modified copy of `init(8)` from the FreeBSD 11-STABLE repo
 along with some example files to demonstrate one way the hook can be used.
@@ -22,12 +28,21 @@ along with some example files to demonstrate one way the hook can be used.
 In this example, an `md(4)` root image boots the kernel and attaches an NBD
 volume, then reroots to a ZFS pool on this volume.
 
-The boot image has `/sbin/init` replaced with the modified init, an NBD client
-at `/sbin/nbd-client`, `/etc/rc` replaced with a short script to bring up
-network interfaces and immediately begin the reroot process, and the reroot
-hook script `/etc/rc.reroot`, which copies the NBD client to the reroot tmpfs
-in `/dev/reroot/`, starts the client, and updates the kernel environment for
-the new root filesystem.
+A boot image can be prepared by making the following modifications to a
+FreeBSD 11 or later mfsbsd.img, mini-memstick.img or similar:
+
++ `/sbin/init` replaced with the modified `init`
++ an NBD client at `/sbin/nbd-client`
++ `/etc/rc` replaced with a short script to bring up network interfaces and
+  immediately begin the reroot process (example in `etc/`)
++ the reroot hook script `/etc/rc.reroot`, which copies the NBD client to the
+  reroot tmpfs in `/dev/reroot/`, starts the client, and updates the kernel
+  environment for the new root filesystem (example in `etc/`)
+
+The example `loader.conf` in `boot/` can be used with a custom built root
+memdisk akin to how mfsbsd is built, as a demonstration of configuring the
+system's storage location from `loader.conf`.  Alternatively, you might fetch
+the server configuration from a metadata API (or hard code it) in `rc.reroot`.
 
 The ZFS pool is a full install of FreeBSD made using `bsdinstall` to an `md(4)`
 attached image file or a zvol.  The only special requirement is to not use DHCP
@@ -42,6 +57,8 @@ NBD client can be found
 
 The `Makefile` is modified to build out of tree and dependencies copied into
 this repo, for convenience.
+
+The patch against the original `init` code can be found in `patch/`.
 
 ## Caveats
 
