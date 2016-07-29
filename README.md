@@ -14,6 +14,8 @@ From [this mailing list post](https://lists.freebsd.org/pipermail/freebsd-announ
 	processes and unmounting the rootfs, and then partial bringup, mounting
 	the new rootfs, running init, and running the startup scripts as usual.
 
+FreeBSD 10.3+ have support for rerooting.
+
 ## ~~Overview~~ Details
 
 In a reroot, all user processes are terminated before unmounting the old root
@@ -105,6 +107,16 @@ drop the system to single user mode in the middle of the reroot process.
 
 Shutdown and reboot have not yet been addressed for the "root on a userland
 client" use case and are humorously ungraceful at this time.
+
+The version of init in this repo has not been tested on FreeBSD 10.3, but the
+concept should not be any different.
+
+This method of implementing the hook is extremely uninvasive, but may have room
+for some improvement.  The hook could be moved to the end of the first phase of
+a reroot, replacing the code for mounting a tmpfs and copying init over to it.
+These functions could then be performed by the `rc.reroot` script instead,
+allowing even greater flexibility to the system administrator and taking
+advantage of existing higher level tools to reduce the complexity of init.
 
 ## Possibilities
 
