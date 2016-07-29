@@ -123,6 +123,11 @@ advantage of existing higher level tools to reduce the complexity of init.
 The example could easily be adapted to use `ggated(8)` and `ggatec(8)` instead
 of `nbd-server` and `nbd-client`.
 
+It may be possible to configure a `hastd(8)` primary node for the root
+filesystem provider with this hook.  This would allow an entire system to be
+highly available.  A secondary node could detect a primary node failure,
+configure itself as the new primary, and reroot to the highly available root.
+
 In the future, a userland RBD client for
 [Ceph](http://ceph.com/ceph-storage/block-storage/) could take advantage of
 this same mechanism to mount FreeBSD's root filesystem from from a cluster
