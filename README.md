@@ -50,15 +50,37 @@ on the network interface `nbd-client` is bound to or otherwise interrupt that
 connection, and manually specify your DNS servers in `/etc/resolv.conf`
 instead.
 
-An NBD server creatively named `nbd-server` is available in the ports tree or
-package repo to serve the root pool image for the purpose of this example.  The
-NBD client can be found
-[here](https://github.com/freqlabs/nbd-client/tree/casper).
+## Building
 
-The `Makefile` is modified to build out of tree and dependencies copied into
-this repo, for convenience.
+### init (required)
+
+The `Makefile` is modified to build out of tree and dependencies have been
+copied into this repo, for convenience. Building on FreeBSD works as you would
+expect:
+
+```
+git clone https://github.com/freqlabs/nbd-init
+cd nbd-init
+make
+```
 
 The patch against the original `init` code can be found in `patch/`.
+
+### NBD (optional)
+
+The NBD client can be found
+[here](https://github.com/freqlabs/nbd-client/tree/casper).  To avoid library
+dependency issues, statically link the client by building with
+`LDFLAGS=-static`:
+
+```
+git clone -b casper https://github.com/freqlabs/nbd-client
+cd nbd-client
+make LDFLAGS=-static
+```
+
+An NBD server creatively named `nbd-server` is available in the ports tree or
+package repo to serve the root pool image for the purpose of this example.
 
 ## Caveats
 
@@ -70,7 +92,7 @@ drop the system to single user mode in the middle of the reroot process.
 Shutdown and reboot have not yet been addressed for the "root on a userland
 client" use case and are humorously ungraceful at this time.
 
-## What Next
+## Possibilities
 
 The example could easily be adapted to use `ggated(8)` and `ggatec(8)` instead
 of `nbd-server` and `nbd-client`.
