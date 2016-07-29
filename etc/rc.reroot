@@ -26,7 +26,8 @@ then
 	exit 1
 fi
 
-kldload zfs
+# Load necessary modules here or in loader.conf, depending where they are.
+#kldload zfs
 
 # Set the kernel environment variables for reroot
 pool="system"
